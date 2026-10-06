@@ -1,0 +1,18 @@
+[project]
+name = "primitive-db"
+version = "0.1.0"
+description = "Console application simulating a primitive database"
+readme = "README.md"
+authors = [
+    { name = "Ekaterina Shchigol", email = "83863040+ekaterina-shchigol@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+project = "primitive_db.main:main"
+database = "primitive_db.main:main"
+
+[build-system]
+requires = ["uv_build>=0.12.18,<0.13.0"]
+build-backend = "uv_build"

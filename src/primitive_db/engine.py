@@ -1,10 +1,11 @@
 import shlex
 
 import prompt
+from prettytable import PrettyTable
 
 from primitive_db.constants import META_FILE
-from primitive_db.core import create_table, drop_table, insert, list_tables
-from primitive_db.parser import parse_insert_command
+from primitive_db.core import create_table, drop_table, insert, list_tables, select
+from primitive_db.parser import parse_insert_command, parse_select_command
 from primitive_db.utils import (
     delete_table_data,
     load_metadata,
@@ -26,6 +27,14 @@ def print_help() -> None:
     print(
         "<command> insert into <имя_таблицы> values "
         "(<значение1>, <значение2>, ...) - создать запись"
+    )
+    print(
+        "<command> select from <имя_таблицы> where "
+        "<столбец> = <значение> - прочитать записи по условию"
+    )
+    print(
+        "<command> select from <имя_таблицы> "
+        "- прочитать все записи"
     )
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
     print("<command> exit - выход из программы")
@@ -58,6 +67,47 @@ def run() -> None:
         if command == "list_tables":
             for table_name in list_tables(metadata):
                 print(f"- {table_name}")
+            continue
+
+        if command == "select":
+            try:
+                table_name, where_clause = parse_select_command(user_input)
+            except ValueError:
+                print(
+                    f"Некорректное значение: {user_input}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            if where_clause is not None:
+                column_name = list(where_clause.keys())[0]
+
+                if column_name not in metadata[table_name]:
+                    print(
+                        f"Некорректное значение: {column_name}. "
+                        "Попробуйте снова."
+                    )
+                    continue
+
+            table_data = load_table_data(table_name)
+            selected_data = select(table_data, where_clause)
+
+            table = PrettyTable()
+            table.field_names = list(metadata[table_name].keys())
+
+            for record in selected_data:
+                row = []
+
+                for column_name in table.field_names:
+                    row.append(record[column_name])
+
+                table.add_row(row)
+
+            print(table)
             continue
 
         if command == "insert":

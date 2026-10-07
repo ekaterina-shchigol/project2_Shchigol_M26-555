@@ -133,3 +133,19 @@ def insert(
     updated_data.append(new_record)
 
     return updated_data
+
+
+def select(table_data: list, where_clause=None) -> list:
+    """Return all records or records matching a condition."""
+    if where_clause is None:
+        return table_data
+
+    column_name = list(where_clause.keys())[0]
+    value = where_clause[column_name]
+    result = []
+
+    for record in table_data:
+        if record[column_name] == value:
+            result.append(record)
+
+    return result

@@ -73,3 +73,31 @@ def parse_insert_command(user_input: str):
     values = parse_values(values_text)
 
     return table_name, values
+
+
+def parse_select_command(user_input: str):
+    """Parse a select command."""
+    args = shlex.split(user_input, posix=False)
+
+    if len(args) == 3:
+        if args[0] != "select" or args[1] != "from":
+            raise ValueError(user_input)
+
+        return args[2], None
+
+    if len(args) == 7:
+        if (
+            args[0] != "select"
+            or args[1] != "from"
+            or args[3] != "where"
+            or args[5] != "="
+        ):
+            raise ValueError(user_input)
+
+        table_name = args[2]
+        column_name = args[4]
+        value = parse_value(args[6])
+
+        return table_name, {column_name: value}
+
+    raise ValueError(user_input)

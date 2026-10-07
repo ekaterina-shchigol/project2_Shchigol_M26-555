@@ -75,3 +75,7 @@ info users
 ## Демонстрация работы
 
 [![asciicast](https://asciinema.org/a/bJnrqd2oUNtGN3V3.svg)](https://asciinema.org/a/bJnrqd2oUNtGN3V3)
+
+### Демонстрация CRUD-операций
+
+[![asciicast](https://asciinema.org/a/CEbLEcF8F10BADtT.svg)](https://asciinema.org/a/CEbLEcF8F10BADtT)

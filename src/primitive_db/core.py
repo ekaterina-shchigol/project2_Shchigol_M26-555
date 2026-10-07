@@ -1,4 +1,5 @@
 from primitive_db.constants import ID_COLUMN, VALID_TYPES
+from primitive_db.decorators import confirm_action, handle_db_errors, log_time
 
 
 def is_valid_table_name(table_name: str) -> bool:
@@ -16,6 +17,7 @@ def is_valid_table_name(table_name: str) -> bool:
     return True
 
 
+@handle_db_errors
 def create_table(
     metadata: dict,
     table_name: str,
@@ -70,6 +72,8 @@ def list_tables(metadata: dict) -> list[str]:
     return list(metadata)
 
 
+@handle_db_errors
+@confirm_action("удаление таблицы")
 def drop_table(metadata: dict, table_name: str) -> dict:
     """Remove a table description from metadata."""
     if table_name not in metadata:
@@ -96,6 +100,8 @@ def is_valid_value(value, data_type: str) -> bool:
     return False
 
 
+@handle_db_errors
+@log_time
 def insert(
     metadata: dict,
     table_name: str,
@@ -121,10 +127,10 @@ def insert(
     new_id = 1
 
     for record in table_data:
-        if record["ID"] >= new_id:
-            new_id = record["ID"] + 1
+        if record[ID_COLUMN] >= new_id:
+            new_id = record[ID_COLUMN] + 1
 
-    new_record = {"ID": new_id}
+    new_record = {ID_COLUMN: new_id}
 
     for (column_name, _), value in zip(columns, values):
         new_record[column_name] = value
@@ -135,6 +141,8 @@ def insert(
     return updated_data
 
 
+@handle_db_errors
+@log_time
 def select(table_data: list, where_clause=None) -> list:
     """Return all records or records matching a condition."""
     if where_clause is None:
@@ -151,6 +159,7 @@ def select(table_data: list, where_clause=None) -> list:
     return result
 
 
+@handle_db_errors
 def update(
     table_data: list,
     set_clause: dict,
@@ -176,6 +185,8 @@ def update(
     return updated_data
 
 
+@handle_db_errors
+@confirm_action("удаление записи")
 def delete(table_data: list, where_clause: dict) -> list:
     """Delete matching records and return updated table data."""
     where_column = list(where_clause.keys())[0]

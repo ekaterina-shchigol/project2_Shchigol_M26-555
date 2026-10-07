@@ -3,7 +3,7 @@ import shlex
 import prompt
 from prettytable import PrettyTable
 
-from primitive_db.constants import META_FILE
+from primitive_db.constants import ID_COLUMN, META_FILE
 from primitive_db.core import (
     create_table,
     delete,
@@ -14,6 +14,7 @@ from primitive_db.core import (
     select,
     update,
 )
+from primitive_db.decorators import create_cacher
 from primitive_db.parser import (
     parse_delete_command,
     parse_insert_command,
@@ -68,6 +69,8 @@ def print_help() -> None:
 def run() -> None:
     """Run the main database command loop."""
     print_help()
+
+    cache_result = create_cacher()
 
     while True:
         metadata = load_metadata(META_FILE)
@@ -157,16 +160,24 @@ def run() -> None:
             table_data = load_table_data(table_name)
             matched_records = select(table_data, where_clause)
 
+            if matched_records is None:
+                continue
+
             if not matched_records:
                 print("Записи не найдены.")
                 continue
 
             updated_data = delete(table_data, where_clause)
+
+            if updated_data is None:
+                continue
+
             save_table_data(table_name, updated_data)
+            cache_result = create_cacher()
 
             for record in matched_records:
                 print(
-                    f'Запись с ID={record["ID"]} успешно удалена '
+                    f'Запись с ID={record[ID_COLUMN]} успешно удалена '
                     f'из таблицы "{table_name}".'
                 )
 
@@ -207,7 +218,7 @@ def run() -> None:
                 )
                 continue
 
-            if set_column == "ID":
+            if set_column == ID_COLUMN:
                 print("Некорректное значение: ID. Попробуйте снова.")
                 continue
 
@@ -232,6 +243,9 @@ def run() -> None:
             table_data = load_table_data(table_name)
             matched_records = select(table_data, where_clause)
 
+            if matched_records is None:
+                continue
+
             if not matched_records:
                 print("Записи не найдены.")
                 continue
@@ -242,11 +256,15 @@ def run() -> None:
                 where_clause,
             )
 
+            if updated_data is None:
+                continue
+
             save_table_data(table_name, updated_data)
+            cache_result = create_cacher()
 
             for record in matched_records:
                 print(
-                    f'Запись с ID={record["ID"]} в таблице '
+                    f'Запись с ID={record[ID_COLUMN]} в таблице '
                     f'"{table_name}" успешно обновлена.'
                 )
 
@@ -277,7 +295,15 @@ def run() -> None:
                     continue
 
             table_data = load_table_data(table_name)
-            selected_data = select(table_data, where_clause)
+            cache_key = f"{table_name}:{where_clause!r}"
+
+            def get_selected_data():
+                return select(table_data, where_clause)
+
+            selected_data = cache_result(cache_key, get_selected_data)
+
+            if selected_data is None:
+                continue
 
             table = PrettyTable()
             table.field_names = list(metadata[table_name].keys())
@@ -313,9 +339,13 @@ def run() -> None:
                 values,
             )
 
+            if updated_data is None:
+                continue
+
             if len(updated_data) == old_count + 1:
                 save_table_data(table_name, updated_data)
-                new_id = updated_data[-1]["ID"]
+                cache_result = create_cacher()
+                new_id = updated_data[-1][ID_COLUMN]
                 print(
                     f'Запись с ID={new_id} успешно добавлена '
                     f'в таблицу "{table_name}".'
@@ -337,6 +367,9 @@ def run() -> None:
                 args[2:],
             )
 
+            if updated_metadata is None:
+                continue
+
             if not table_existed and table_name in updated_metadata:
                 save_metadata(META_FILE, updated_metadata)
 
@@ -348,12 +381,19 @@ def run() -> None:
                 continue
 
             table_name = args[1]
-            table_existed = table_name in metadata
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
             updated_metadata = drop_table(metadata, table_name)
 
-            if table_existed:
-                save_metadata(META_FILE, updated_metadata)
-                delete_table_data(table_name)
+            if updated_metadata is None:
+                continue
+
+            save_metadata(META_FILE, updated_metadata)
+            delete_table_data(table_name)
+            cache_result = create_cacher()
 
             continue
 

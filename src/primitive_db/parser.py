@@ -131,3 +131,27 @@ def parse_update_command(user_input: str):
     where_clause = {where_column: where_value}
 
     return table_name, set_clause, where_clause
+
+
+def parse_delete_command(user_input: str):
+    """Parse a delete command."""
+    args = shlex.split(user_input, posix=False)
+
+    if len(args) != 7:
+        raise ValueError(user_input)
+
+    if (
+        args[0] != "delete"
+        or args[1] != "from"
+        or args[3] != "where"
+        or args[5] != "="
+    ):
+        raise ValueError(user_input)
+
+    table_name = args[2]
+    column_name = args[4]
+    value = parse_value(args[6])
+
+    where_clause = {column_name: value}
+
+    return table_name, where_clause

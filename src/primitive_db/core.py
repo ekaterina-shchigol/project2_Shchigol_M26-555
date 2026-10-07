@@ -174,3 +174,17 @@ def update(
         updated_data.append(new_record)
 
     return updated_data
+
+
+def delete(table_data: list, where_clause: dict) -> list:
+    """Delete matching records and return updated table data."""
+    where_column = list(where_clause.keys())[0]
+    where_value = where_clause[where_column]
+
+    updated_data = []
+
+    for record in table_data:
+        if record[where_column] != where_value:
+            updated_data.append(record)
+
+    return updated_data

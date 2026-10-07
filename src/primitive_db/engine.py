@@ -6,6 +6,7 @@ from prettytable import PrettyTable
 from primitive_db.constants import META_FILE
 from primitive_db.core import (
     create_table,
+    delete,
     drop_table,
     insert,
     is_valid_value,
@@ -14,6 +15,7 @@ from primitive_db.core import (
     update,
 )
 from primitive_db.parser import (
+    parse_delete_command,
     parse_insert_command,
     parse_select_command,
     parse_update_command,
@@ -53,6 +55,10 @@ def print_help() -> None:
         "<новое_значение1> where <столбец_условия> = "
         "<значение_условия> - обновить запись"
     )
+    print(
+        "<command> delete from <имя_таблицы> where "
+        "<столбец> = <значение> - удалить запись"
+    )
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
     print("<command> exit - выход из программы")
     print("<command> help - справочная информация")
@@ -84,6 +90,57 @@ def run() -> None:
         if command == "list_tables":
             for table_name in list_tables(metadata):
                 print(f"- {table_name}")
+            continue
+
+        if command == "delete":
+            try:
+                table_name, where_clause = parse_delete_command(user_input)
+            except ValueError:
+                print(
+                    f"Некорректное значение: {user_input}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            where_column = list(where_clause.keys())[0]
+            where_value = where_clause[where_column]
+
+            if where_column not in metadata[table_name]:
+                print(
+                    f"Некорректное значение: {where_column}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            where_type = metadata[table_name][where_column]
+
+            if not is_valid_value(where_value, where_type):
+                print(
+                    f"Некорректное значение: {where_value}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            table_data = load_table_data(table_name)
+            matched_records = select(table_data, where_clause)
+
+            if not matched_records:
+                print("Записи не найдены.")
+                continue
+
+            updated_data = delete(table_data, where_clause)
+            save_table_data(table_name, updated_data)
+
+            for record in matched_records:
+                print(
+                    f'Запись с ID={record["ID"]} успешно удалена '
+                    f'из таблицы "{table_name}".'
+                )
+
             continue
 
         if command == "update":

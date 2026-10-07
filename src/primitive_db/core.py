@@ -149,3 +149,28 @@ def select(table_data: list, where_clause=None) -> list:
             result.append(record)
 
     return result
+
+
+def update(
+    table_data: list,
+    set_clause: dict,
+    where_clause: dict,
+) -> list:
+    """Update matching records and return updated table data."""
+    updated_data = []
+
+    set_column = list(set_clause.keys())[0]
+    set_value = set_clause[set_column]
+
+    where_column = list(where_clause.keys())[0]
+    where_value = where_clause[where_column]
+
+    for record in table_data:
+        new_record = record.copy()
+
+        if record[where_column] == where_value:
+            new_record[set_column] = set_value
+
+        updated_data.append(new_record)
+
+    return updated_data

@@ -101,3 +101,33 @@ def parse_select_command(user_input: str):
         return table_name, {column_name: value}
 
     raise ValueError(user_input)
+
+
+def parse_update_command(user_input: str):
+    """Parse an update command."""
+    args = shlex.split(user_input, posix=False)
+
+    if len(args) != 10:
+        raise ValueError(user_input)
+
+    if (
+        args[0] != "update"
+        or args[2] != "set"
+        or args[4] != "="
+        or args[6] != "where"
+        or args[8] != "="
+    ):
+        raise ValueError(user_input)
+
+    table_name = args[1]
+
+    set_column = args[3]
+    set_value = parse_value(args[5])
+
+    where_column = args[7]
+    where_value = parse_value(args[9])
+
+    set_clause = {set_column: set_value}
+    where_clause = {where_column: where_value}
+
+    return table_name, set_clause, where_clause

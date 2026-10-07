@@ -4,8 +4,20 @@ import prompt
 from prettytable import PrettyTable
 
 from primitive_db.constants import META_FILE
-from primitive_db.core import create_table, drop_table, insert, list_tables, select
-from primitive_db.parser import parse_insert_command, parse_select_command
+from primitive_db.core import (
+    create_table,
+    drop_table,
+    insert,
+    is_valid_value,
+    list_tables,
+    select,
+    update,
+)
+from primitive_db.parser import (
+    parse_insert_command,
+    parse_select_command,
+    parse_update_command,
+)
 from primitive_db.utils import (
     delete_table_data,
     load_metadata,
@@ -35,6 +47,11 @@ def print_help() -> None:
     print(
         "<command> select from <имя_таблицы> "
         "- прочитать все записи"
+    )
+    print(
+        "<command> update <имя_таблицы> set <столбец1> = "
+        "<новое_значение1> where <столбец_условия> = "
+        "<значение_условия> - обновить запись"
     )
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
     print("<command> exit - выход из программы")
@@ -67,6 +84,86 @@ def run() -> None:
         if command == "list_tables":
             for table_name in list_tables(metadata):
                 print(f"- {table_name}")
+            continue
+
+        if command == "update":
+            try:
+                table_name, set_clause, where_clause = parse_update_command(
+                    user_input
+                )
+            except ValueError:
+                print(
+                    f"Некорректное значение: {user_input}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            set_column = list(set_clause.keys())[0]
+            set_value = set_clause[set_column]
+            where_column = list(where_clause.keys())[0]
+            where_value = where_clause[where_column]
+
+            if set_column not in metadata[table_name]:
+                print(
+                    f"Некорректное значение: {set_column}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            if where_column not in metadata[table_name]:
+                print(
+                    f"Некорректное значение: {where_column}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            if set_column == "ID":
+                print("Некорректное значение: ID. Попробуйте снова.")
+                continue
+
+            set_type = metadata[table_name][set_column]
+
+            if not is_valid_value(set_value, set_type):
+                print(
+                    f"Некорректное значение: {set_value}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            where_type = metadata[table_name][where_column]
+
+            if not is_valid_value(where_value, where_type):
+                print(
+                    f"Некорректное значение: {where_value}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            table_data = load_table_data(table_name)
+            matched_records = select(table_data, where_clause)
+
+            if not matched_records:
+                print("Записи не найдены.")
+                continue
+
+            updated_data = update(
+                table_data,
+                set_clause,
+                where_clause,
+            )
+
+            save_table_data(table_name, updated_data)
+
+            for record in matched_records:
+                print(
+                    f'Запись с ID={record["ID"]} в таблице '
+                    f'"{table_name}" успешно обновлена.'
+                )
+
             continue
 
         if command == "select":

@@ -3,11 +3,14 @@ import shlex
 import prompt
 
 from primitive_db.constants import META_FILE
-from primitive_db.core import create_table, drop_table, list_tables
+from primitive_db.core import create_table, drop_table, insert, list_tables
+from primitive_db.parser import parse_insert_command
 from primitive_db.utils import (
     delete_table_data,
     load_metadata,
+    load_table_data,
     save_metadata,
+    save_table_data,
 )
 
 
@@ -20,6 +23,10 @@ def print_help() -> None:
         "<столбец1:тип> <столбец2:тип> .. - создать таблицу"
     )
     print("<command> list_tables - показать список всех таблиц")
+    print(
+        "<command> insert into <имя_таблицы> values "
+        "(<значение1>, <значение2>, ...) - создать запись"
+    )
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
     print("<command> exit - выход из программы")
     print("<command> help - справочная информация")
@@ -51,6 +58,36 @@ def run() -> None:
         if command == "list_tables":
             for table_name in list_tables(metadata):
                 print(f"- {table_name}")
+            continue
+
+        if command == "insert":
+            try:
+                table_name, values = parse_insert_command(user_input)
+            except ValueError:
+                print(
+                    f"Некорректное значение: {user_input}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            table_data = load_table_data(table_name)
+            old_count = len(table_data)
+
+            updated_data = insert(
+                metadata,
+                table_name,
+                table_data,
+                values,
+            )
+
+            if len(updated_data) == old_count + 1:
+                save_table_data(table_name, updated_data)
+                new_id = updated_data[-1]["ID"]
+                print(
+                    f'Запись с ID={new_id} успешно добавлена '
+                    f'в таблицу "{table_name}".'
+                )
+
             continue
 
         if command == "create_table":

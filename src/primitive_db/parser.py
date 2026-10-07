@@ -1,0 +1,75 @@
+import shlex
+
+
+def parse_value(value_text: str):
+    """Convert a text value to a Python value."""
+    value_text = value_text.strip()
+
+    if (
+        len(value_text) >= 2
+        and value_text[0] == '"'
+        and value_text[-1] == '"'
+    ):
+        return value_text[1:-1]
+
+    if value_text.lower() == "true":
+        return True
+
+    if value_text.lower() == "false":
+        return False
+
+    try:
+        return int(value_text)
+    except ValueError:
+        raise ValueError(value_text)
+
+
+def parse_values(values_text: str) -> list:
+    """Parse comma-separated values."""
+    lexer = shlex.shlex(values_text, posix=False)
+    lexer.whitespace = ","
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+
+    raw_values = list(lexer)
+    values = []
+
+    for raw_value in raw_values:
+        values.append(parse_value(raw_value))
+
+    return values
+
+
+def parse_insert_command(user_input: str):
+    """Parse an insert command and return table name and values."""
+    prefix = "insert into "
+
+    if not user_input.startswith(prefix):
+        raise ValueError(user_input)
+
+    command_part = user_input[len(prefix):]
+    parts = command_part.split(" values ", 1)
+
+    if len(parts) != 2:
+        raise ValueError(user_input)
+
+    table_name = parts[0].strip()
+    values_text = parts[1].strip()
+
+    if not table_name or " " in table_name:
+        raise ValueError(user_input)
+
+    for char in table_name:
+        if not char.isascii():
+            raise ValueError(user_input)
+
+        if not (char.isalnum() or char == "_"):
+            raise ValueError(user_input)
+
+    if not values_text.startswith("(") or not values_text.endswith(")"):
+        raise ValueError(user_input)
+
+    values_text = values_text[1:-1]
+    values = parse_values(values_text)
+
+    return table_name, values

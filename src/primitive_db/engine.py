@@ -59,6 +59,7 @@ def print_help() -> None:
         "<command> delete from <имя_таблицы> where "
         "<столбец> = <значение> - удалить запись"
     )
+    print("<command> info <имя_таблицы> - вывести информацию о таблице")
     print("<command> drop_table <имя_таблицы> - удалить таблицу")
     print("<command> exit - выход из программы")
     print("<command> help - справочная информация")
@@ -90,6 +91,34 @@ def run() -> None:
         if command == "list_tables":
             for table_name in list_tables(metadata):
                 print(f"- {table_name}")
+            continue
+
+        if command == "info":
+            if len(args) != 2:
+                print(
+                    f"Некорректное значение: {user_input}. "
+                    "Попробуйте снова."
+                )
+                continue
+
+            table_name = args[1]
+
+            if table_name not in metadata:
+                print(f'Ошибка: Таблица "{table_name}" не существует.')
+                continue
+
+            table_data = load_table_data(table_name)
+            columns = []
+
+            for column_name, data_type in metadata[table_name].items():
+                columns.append(f"{column_name}:{data_type}")
+
+            columns_text = ", ".join(columns)
+
+            print(f"Таблица: {table_name}")
+            print(f"Столбцы: {columns_text}")
+            print(f"Количество записей: {len(table_data)}")
+
             continue
 
         if command == "delete":
